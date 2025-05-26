@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Zé Café 3D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+        }
+        #game-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+        #left-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #right-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .arrow-btn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #up-btn {
+            border-radius: 10px 10px 0 0;
+        }
+        #down-btn {
+            border-radius: 0 0 10px 10px;
+        }
+        #left-btn, #right-btn {
+            border-radius: 0;
+        }
+        #loading-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #5C3A21;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+        }
+        #start-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background-color: #8B5A2B;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        #game-over {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+        }
+        #level-up {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(92, 58, 33, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            font-size: 24px;
+        }
+        #sound-btn {
+            position: absolute;
+            top: 30px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container"></div>
+<div id="ui">
+    <div id="score">Pontos: 0</div>
+    <div id="lives">Vidas: ❤️❤️❤️❤️❤️</div>
+    <div id="level">Nível: 1</div>
+</div>
+<button id="sound-btn">🔊</button>
+<div id="controls">
+    <div id="left-controls">
+        <button class="control-btn" id="jump-btn">↑</button>
+        <button class="control-btn" id="throw-btn">☕</button>
+    </div>
+    <div id="right-controls">
+        <div>
+            <button class="arrow-btn" id="up-btn">↑</button>
+            <div style="display: flex;">
+                <button class="arrow-btn" id="left-btn">←</button>
+                <button class="arrow-btn" id="right-btn">→</button>
+            </div>
+            <button class="arrow-btn" id="down-btn">↓</button>
+        </div>
+    </div>
+</div>
+<div id="loading-screen">
+    <h1>Zé Café 3D</h1>
+    <p>Carregando...</p>
+    <button id="start-btn">Começar</button>
+</div>
+<div id="game-over">
+    <h1>Game Over</h1>
+    <p id="final-score">Pontuação: 0</p>
+    <button id="restart-btn">Jogar Novamente</button>
+</div>
+<div id="level-up">
+    <h1>Nível Up!</h1>
+    <p id="new-level">Nível 2</p>
+    <button id="continue-btn">Continuar</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Sons (URLs atualizados)
+    const sounds = {
+        coffee: new Audio('mixkit-achievement-bell-600.wav'),
+        tea: new Audio('mixkit-arcade-retro-game-over-213.wav'),
+        jump: new Audio('arcade-game-jump-ni-sound-1-00-01.mp3'),
+        throw: new Audio('mixkit-player-jumping-in-a-video-game-2043.wav'),
+        crash: new Audio('mixkit-wood-hard-hit-2182.wav'),
+        levelUp: new Audio('mixkit-unlock-game-notification-253.wav'),
+        background: new Audio('mixkit-game-show-suspense-waiting-667.wav')
+    };
+
+    Object.values(sounds).forEach(sound => {
+        sound.preload = 'auto';
+        sound.addEventListener('error', () => console.warn(`Áudio "${sound.src}" falhou.`));
+    });
+
+    function startGame() {
+        document.getElementById('loading-screen').style.display = 'none';
+        score = 0;
+        lives = 5;
+        level = 1;
+        playerSpeed = 0.2;
+        playerSpeedReduction = 0;
+        collectedBeans = 0;
+        document.getElementById('score').textContent = `Pontos: ${score}`;
+        document.getElementById('level').textContent = `Nível: ${level}`;
+        updateLivesDisplay();
+        document.getElementById('throw-btn').textContent = `☕ (${collectedBeans})`;
+        player.position.set(0, 1.5, 0);
+        generateObstacles();
+        spawnCoffeeBeanCollectibles();
+        gameStarted = true;
+        gameOver = false;
+        if (soundEnabled) {
+            sounds.background.currentTime = 0;
+            sounds.background.play();
+        }
+    }
+
+    function restartGame() {
+        document.getElementById('game-over').style.display = 'none';
+        startGame();
+    }
+
+    function continueGame() {
+        document.getElementById('level-up').style.display = 'none';
+        spawnCoffeeCups();
+        spawnTeaCups();
+        generateObstacles();
+        gameStarted = true;
+    }
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        const soundBtn = document.getElementById('sound-btn');
+        if (soundEnabled) {
+            soundBtn.textContent = '🔊';
+            sounds.background.play();
+        } else {
+            soundBtn.textContent = '🔇';
+            sounds.background.pause();
+        }
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Variáveis do jogo
+    let scene, camera, renderer, player;
+    let coffeeCups = [], teaCups = [], obstacles = [], coffeeBeans = [], coffeeBeanCollectibles = [];
+    let score = 0, lives = 5, level = 1;
+    let playerSpeed = 0.2, playerSpeedReduction = 0;
+    let gameStarted = false, gameOver = false;
+    let worldSize = 200;
+    let lastCoffeeBeanTime = 0;
+    let collectedBeans = 0;
+    let clock = new THREE.Clock();
+    let soundEnabled = true;
+    let isJumping = false;
+    let gravity = 0.05;
+    let verticalVelocity = 0;
+    let controlsState = { up: false, down: false, left: false, right: false, jump: false, throw: false };
+
+    function init() {
+        // Cena
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 50, worldSize / 2);
+
+        // Câmera
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+
+        // Renderizador
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        // Luzes
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(0, 50, 50);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        createGround();
+        createPlayer();
+
+        window.addEventListener('resize', onWindowResize);
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', restartGame);
+        document.getElementById('continue-btn').addEventListener('click', continueGame);
+        setupControls();
+        document.getElementById('sound-btn').addEventListener('click', toggleSound);
+
+        Object.values(sounds).forEach(sound => {
+            sound.load();
+            sound.volume = 0.5;
+        });
+
+        document.getElementById('loading-screen').style.display = 'flex';
+        animate();
+    }
+
+    function createGround() {
+        const groundGeometry = new THREE.PlaneGeometry(worldSize, worldSize);
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x3a5f0b });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+        generateObstacles();
+    }
+
+    function createPlayer() {
+        const geometry = new THREE.BoxGeometry(0.8, 1.5, 0.8);
+        const material = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
+        player = new THREE.Mesh(geometry, material);
+        player.position.set(0, 1.5, 0);
+        scene.add(player);
+    }
+
+    function generateObstacles() {
+        obstacles.forEach(obstacle => scene.remove(obstacle));
+        obstacles = [];
+        for (let i = 0; i < 30; i++) {
+            const type = Math.random() > 0.3 ? 'box' : 'cylinder';
+            let geometry, material;
+            if (type === 'box') {
+                geometry = new THREE.BoxGeometry(Math.random() * 5 + 3, Math.random() * 2 + 0.5, Math.random() * 5 + 3);
+                material = new THREE.MeshStandardMaterial({ color: 0xA0522D });
+            } else {
+                const radius = Math.random() * 2 + 1;
+                geometry = new THREE.CylinderGeometry(radius, radius, Math.random() * 2 + 0.5, 8);
+                material = new THREE.MeshStandardMaterial({ color: 0xCD853F });
+            }
+            const obstacle = new THREE.Mesh(geometry, material);
+            obstacle.position.set((Math.random() - 0.5) * (worldSize - 20), geometry.parameters.height / 2, (Math.random() - 0.5) * (worldSize - 20));
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+        spawnCoffeeCups();
+        spawnTeaCups();
+    }
+
+    function spawnCoffeeCups() {
+        coffeeCups.forEach(cup => scene.remove(cup));
+        coffeeCups = [];
+        for (let i = 0; i < 50; i++) {
+            const geometry = new THREE.CylinderGeometry(0.3, 0.4, 0.5, 16);
+            const material = new THREE.MeshStandardMaterial({ color: 0x4B3621 });
+            const cup = new THREE.Mesh(geometry, material);
+            cup.position.set((Math.random() - 0.5) * (worldSize - 10), 0.25, (Math.random() - 0.5) * (worldSize - 10));
+            cup.rotation.x = Math.PI / 2;
+            scene.add(cup);
+            coffeeCups.push(cup);
+        }
+    }
+
+    function spawnTeaCups() {
+        teaCups.forEach(cup => scene.remove(cup));
+        teaCups = [];
+        for (let i = 0; i < 15; i++) {
+            const geometry = new THREE.CylinderGeometry(0.3, 0.4, 0.5, 16);
+            const material = new THREE.MeshStandardMaterial({ color: 0xD2B48C });
+            const cup = new THREE.Mesh(geometry, material);
+            cup.position.set((Math.random() - 0.5) * (worldSize - 10), 0.25, (Math.random() - 0.5) * (worldSize - 10));
+            cup.rotation.x = Math.PI / 2;
+            scene.add(cup);
+            teaCups.push(cup);
+        }
+    }
+
+    function checkCollision(obj1, obj2) {
+        const box1 = new THREE.Box3().setFromObject(obj1);
+        const box2 = new THREE.Box3().setFromObject(obj2);
+        return box1.intersectsBox(box2);
+    }
+
+    function setupControls() {
+        // Configura eventos de toque
+        document.getElementById('jump-btn').addEventListener('touchstart', () => controlsState.jump = true);
+        document.getElementById('jump-btn').addEventListener('touchend', () => controlsState.jump = false);
+        document.getElementById('throw-btn').addEventListener('touchstart', () => {
+            if (collectedBeans > 0) {
+                throwCoffeeBean();
+            }
+        });
+        document.getElementById('up-btn').addEventListener('touchstart', () => controlsState.up = true);
+        document.getElementById('up-btn').addEventListener('touchend', () => controlsState.up = false);
+        document.getElementById('down-btn').addEventListener('touchstart', () => controlsState.down = true);
+        document.getElementById('down-btn').addEventListener('touchend', () => controlsState.down = false);
+        document.getElementById('left-btn').addEventListener('touchstart', () => controlsState.left = true);
+        document.getElementById('left-btn').addEventListener('touchend', () => controlsState.left = false);
+        document.getElementById('right-btn').addEventListener('touchstart', () => controlsState.right = true);
+        document.getElementById('right-btn').addEventListener('touchend', () => controlsState.right = false);
+
+        // Configura eventos de teclado
+        document.addEventListener('keydown', e => {
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W': controlsState.up = true; break;
+                case 'ArrowDown': case 's': case 'S': controlsState.down = true; break;
+                case 'ArrowLeft': case 'a': case 'A': controlsState.left = true; break;
+                case 'ArrowRight': case 'd': case 'D': controlsState.right = true; break;
+                case ' ': controlsState.jump = true; break;
+                case 'f': case 'F': 
+                    if (collectedBeans > 0) {
+                        throwCoffeeBean();
+                    }
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W': controlsState.up = false; break;
+                case 'ArrowDown': case 's': case 'S': controlsState.down = false; break;
+                case 'ArrowLeft': case 'a': case 'A': controlsState.left = false; break;
+                case 'ArrowRight': case 'd': case 'D': controlsState.right = false; break;
+                case ' ': controlsState.jump = false; break;
+            }
+        });
+    }
+
+    function throwCoffeeBean() {
+        if (collectedBeans <= 0) return;
+        
+        const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: 0x4B3621 });
+        const bean = new THREE.Mesh(geometry, material);
+        bean.position.copy(player.position).y += 0.5;
+        scene.add(bean);
+        coffeeBeans.push(bean);
+        collectedBeans--;
+        document.getElementById('throw-btn').textContent = `☕ (${collectedBeans})`;
+        
+        if (soundEnabled) {
+            sounds.throw.currentTime = 0;
+            sounds.throw.play().catch(e => {});
+        }
+    }
+
+    function updateControls() {
+        if (!gameStarted || gameOver) return;
+
+        const delta = clock.getDelta();
+        const cappedDelta = Math.min(delta, 0.1);
+        const effectiveSpeed = (playerSpeed - playerSpeedReduction) * cappedDelta * 60;
+
+        let moveX = 0, moveZ = 0;
+        if (controlsState.up) moveZ -= effectiveSpeed;
+        if (controlsState.down) moveZ += effectiveSpeed;
+        if (controlsState.left) moveX -= effectiveSpeed;
+        if (controlsState.right) moveX += effectiveSpeed;
+
+        const originalPosition = player.position.clone();
+        const playerHeight = 1.5;
+        const groundLevel = playerHeight / 2;
+
+        // Lateral Collision Check
+        if (moveX !== 0) {
+            const nextXPos = player.position.clone();
+            nextXPos.x += moveX;
+            if (!checkObstacleCollisionAt(nextXPos)) {
+                player.position.x += moveX;
+            } else {
+                if (soundEnabled) {
+                     sounds.crash.currentTime = 0;
+                     sounds.crash.play().catch(e => {});
+                }
+            }
+        }
+
+        if (moveZ !== 0) {
+            const nextZPos = player.position.clone();
+            nextZPos.z += moveZ;
+            if (!checkObstacleCollisionAt(nextZPos)) {
+                player.position.z += moveZ;
+            } else {
+                 if (soundEnabled) {
+                     sounds.crash.currentTime = 0;
+                     sounds.crash.play().catch(e => {});
+                 }
+            }
+        }
+
+        // Vertical Movement
+        let onGround = false;
+        let onPlatform = false;
+        const playerSizeVec = new THREE.Vector3();
+        new THREE.Box3().setFromObject(player).getSize(playerSizeVec);
+
+        // Check landing on ground
+        if (player.position.y <= groundLevel && verticalVelocity <= 0) {
+            player.position.y = groundLevel;
+            verticalVelocity = 0;
+            onGround = true;
+            if (isJumping) isJumping = false;
+        }
+
+        // Check landing on obstacle platform
+        if (!onGround && verticalVelocity <= 0) {
+             const feetPos = player.position.clone();
+             feetPos.y -= (playerHeight / 2) + 0.1;
+             const checkRadius = playerSizeVec.x / 2;
+
+             for (const obstacle of obstacles) {
+                 const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+                 if (feetPos.x >= obstacleBox.min.x && feetPos.x <= obstacleBox.max.x &&
+                     feetPos.z >= obstacleBox.min.z && feetPos.z <= obstacleBox.max.z &&
+                     player.position.y >= obstacleBox.max.y &&
+                     player.position.y - playerHeight / 2 < obstacleBox.max.y + 0.1) {
+
+                        player.position.y = obstacleBox.max.y + playerHeight / 2;
+                        verticalVelocity = 0;
+                        onPlatform = true;
+                        if (isJumping) isJumping = false;
+                        break;
+                 }
+             }
+        }
+
+        // Apply gravity if airborne
+        if (!onGround && !onPlatform) {
+            verticalVelocity -= gravity * cappedDelta * 60;
+            player.position.y += verticalVelocity * cappedDelta * 60;
+
+            if (player.position.y < groundLevel) {
+                player.position.y = groundLevel;
+                verticalVelocity = 0;
+                isJumping = false;
+                onGround = true;
+            }
+        } else {
+             verticalVelocity = 0;
+        }
+
+        // Handle Jump
+        if (controlsState.jump && !isJumping && (onGround || onPlatform)) {
+            if (soundEnabled) {
+                sounds.jump.currentTime = 0;
+                sounds.jump.play().catch(e => {});
+            }
+            isJumping = true;
+            verticalVelocity = 0.4;
+            player.position.y += 0.1;
+        }
+
+        // Item Collision Check
+        for (let i = coffeeCups.length - 1; i >= 0; i--) {
+            const cup = coffeeCups[i];
+            if (checkCollision(player, cup)) {
+                score += 10;
+                document.getElementById('score').textContent = `Pontos: ${score}`;
+                if (soundEnabled) {
+                    sounds.coffee.currentTime = 0;
+                    sounds.coffee.play().catch(e => {});
+                }
+                scene.remove(cup);
+                coffeeCups.splice(i, 1);
+            }
+        }
+
+        for (let i = coffeeBeanCollectibles.length - 1; i >= 0; i--) {
+            const bean = coffeeBeanCollectibles[i];
+            if (checkCollision(player, bean)) {
+                collectedBeans++;
+                document.getElementById('throw-btn').textContent = `☕ (${collectedBeans})`;
+                if (soundEnabled) {
+                    sounds.coffee.currentTime = 0;
+                    sounds.coffee.play().catch(e => {});
+                }
+                scene.remove(bean);
+                coffeeBeanCollectibles.splice(i, 1);
+            }
+        }
+
+        // Clamp position to world bounds
+        const halfWorld = worldSize / 2 - 1;
+        player.position.x = THREE.MathUtils.clamp(player.position.x, -halfWorld, halfWorld);
+        player.position.z = THREE.MathUtils.clamp(player.position.z, -halfWorld, halfWorld);
+    }
+
+    function checkObstacleCollisionAt(position) {
+        const playerSizeVec = new THREE.Vector3();
+        new THREE.Box3().setFromObject(player).getSize(playerSizeVec);
+        const checkCenterPos = new THREE.Vector3(position.x, position.y, position.z);
+        const tempPlayerBox = new THREE.Box3().setFromCenterAndSize(checkCenterPos, playerSizeVec);
+        for (const obstacle of obstacles) {
+            const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+            if (tempPlayerBox.intersectsBox(obstacleBox)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function updateBeans() {
+        for (let i = coffeeBeans.length - 1; i >= 0; i--) {
+            const bean = coffeeBeans[i];
+            bean.position.y += 0.5;
+            bean.position.z -= 0.5;
+
+            for (let j = 0; j < obstacles.length; j++) {
+                const obstacle = obstacles[j];
+                if (checkCollision(bean, obstacle)) {
+                    scene.remove(obstacle);
+                    obstacles.splice(j, 1);
+                    scene.remove(bean);
+                    coffeeBeans.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    function updateLivesDisplay() {
+        let livesText = 'Vidas: ';
+        for (let i = 0; i < 5; i++) {
+            livesText += i < lives ? '❤️' : '♡';
+        }
+        document.getElementById('lives').innerHTML = livesText;
+    }
+
+    function levelUp() {
+        level++;
+        document.getElementById('level').textContent = `Nível: ${level}`;
+        document.getElementById('new-level').textContent = `Nível ${level}`;
+        document.getElementById('level-up').style.display = 'flex';
+        gameStarted = false;
+    }
+
+    function endGame() {
+        document.getElementById('final-score').textContent = `Pontuação: ${score}`;
+        document.getElementById('game-over').style.display = 'flex';
+    }
+
+    function spawnCoffeeBeanCollectibles() {
+        coffeeBeanCollectibles.forEach(bean => scene.remove(bean));
+        coffeeBeanCollectibles = [];
+        for (let i = 0; i < 20; i++) {
+            const geometry = new THREE.SphereGeometry(0.4, 16, 16);
+            const material = new THREE.MeshStandardMaterial({ color: 0x654321 });
+            const bean = new THREE.Mesh(geometry, material);
+            bean.position.set(
+                (Math.random() - 0.5) * (worldSize - 15),
+                0.4,
+                (Math.random() - 0.5) * (worldSize - 15)
+            );
+            let tooClose = false;
+            for(const obstacle of obstacles) {
+                const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+                if (obstacleBox.containsPoint(bean.position)) {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (!tooClose) {
+                 scene.add(bean);
+                 coffeeBeanCollectibles.push(bean);
+            }
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (gameStarted && !gameOver) {
+            updateControls();
+            updateBeans();
+        }
+
+        // Câmera segue o jogador
+        const cameraOffset = new THREE.Vector3(0, 5, 10);
+        const targetPosition = player.position.clone().add(cameraOffset);
+        camera.position.lerp(targetPosition, 0.1);
+        camera.lookAt(player.position);
+
+        renderer.render(scene, camera);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
